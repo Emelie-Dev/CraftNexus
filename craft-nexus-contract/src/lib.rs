@@ -27,6 +27,8 @@ mod admin_idempotency_test;
 #[cfg(test)]
 mod arbitration_escalation_test;
 #[cfg(test)]
+mod archive_test;
+#[cfg(test)]
 mod dispute_escalation_timeout_test;
 #[cfg(test)]
 mod enhanced_features_test;
@@ -14391,16 +14393,18 @@ impl CraftNexusContract {
             escrow: escrow.clone(),
             finalized_at: env.ledger().timestamp(),
         };
+        let index = Self::get_persistent_u32(env, &DataKey::ArchivalSummaryCount);
+        let next_index = index
+            .checked_add(1)
+            .unwrap_or_else(|| env.panic_with_error(Error::CounterOverflow));
+        let index_key = DataKey::ArchivalSummaryIndexed(index);
         env.storage().persistent().set(&summary_key, &summary);
         Self::extend_persistent(env, &summary_key);
-
-        let index = Self::get_persistent_u32(env, &DataKey::ArchivalSummaryCount);
-        let index_key = DataKey::ArchivalSummaryIndexed(index);
         env.storage().persistent().set(&index_key, &order_id);
         Self::extend_persistent(env, &index_key);
         env.storage()
             .persistent()
-            .set(&DataKey::ArchivalSummaryCount, &(index + 1));
+            .set(&DataKey::ArchivalSummaryCount, &next_index);
         Self::extend_persistent(env, &DataKey::ArchivalSummaryCount);
         Ok(true)
     }
@@ -14409,16 +14413,17 @@ impl CraftNexusContract {
     pub fn archive_terminal_escrow(env: Env, order_id: u32) -> Result<bool, Error> {
         let admin = Self::get_admin(&env)?;
         admin.require_auth();
+        Self::check_not_paused(&env);
         let escrow: Escrow = env
             .storage()
             .persistent()
             .get(&(ESCROW, order_id))
-            .ok_or(Error::EscrowNotFound)?;
+            .unwrap_or_else(|| env.panic_with_error(Error::EscrowNotFound));
         if !matches!(
             escrow.status,
             EscrowStatus::Released | EscrowStatus::Refunded | EscrowStatus::Resolved
         ) {
-            return Err(Error::InvalidEscrowState);
+            env.panic_with_error(Error::InvalidEscrowState);
         }
         Self::write_archival_summary_for_escrow(&env, &escrow)
     }
