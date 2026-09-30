@@ -41,6 +41,8 @@ mod min_release_window_test;
 #[cfg(test)]
 mod pagination_boundary_test;
 #[cfg(test)]
+mod issue_1347_test;
+#[cfg(test)]
 mod diagnostic_scan_test;
 #[cfg(test)]
 mod differential_upgrade_compatibility_test {
@@ -3149,7 +3151,7 @@ impl CraftNexusContract {
         env.storage()
             .instance()
             .set(&DataKey::LastAppliedAdminRevision, &expected_revision);
-        let next = current.saturating_add(1);
+        let next = current.checked_add(1).ok_or(Error::CounterOverflow)?;
         env.storage().instance().set(&DataKey::AdminRevision, &next);
         Ok(expected_revision)
     }
@@ -10376,10 +10378,19 @@ impl CraftNexusContract {
         Self::timeout_outcome(config.expired_dispute_fee_policy)
     }
 
-    /// Read the configured escalation checkpoint schedule (#1080).
-    pub fn get_escalation_checkpoints(env: Env) -> EscalationCheckpoints {
-        let config = Self::get_platform_config_internal(&env);
-        Self::escalation_checkpoints(&env, &config)
+    /// Read the explicitly configured escalation checkpoint schedule (#1080).
+    ///
+    /// Returns `None` when no schedule is stored. Dispute processing continues
+    /// to use the platform defaults in that case.
+    pub fn get_escalation_checkpoints(env: Env) -> Option<EscalationCheckpoints> {
+        let key = DataKey::EscalationCheckpoints;
+        match env.storage().persistent().get(&key) {
+            Some(checkpoints) => {
+                Self::extend_persistent_read(&env, &key);
+                Some(checkpoints)
+            }
+            None => None,
+        }
     }
 
     /// Configure the escalation checkpoint schedule (admin only) (#1080).
@@ -11934,6 +11945,10 @@ impl CraftNexusContract {
         if fee_bps > MAX_PLATFORM_FEE_BPS {
             env.panic_with_error(crate::Error::InvalidFee);
         }
+
+        // Pause is a write gate. Check it before the admin-mutation fingerprint
+        // or fee-tier storage can be changed.
+        Self::check_not_paused(&env);
 
         let mut payload = artisan.clone().to_xdr(&env);
         payload.extend_from_slice(&fee_bps.to_be_bytes());
@@ -13991,9 +14006,12 @@ impl CraftNexusContract {
     }
 
     pub fn get_reconciliation_report(env: Env, token: Address) -> Option<ReconciliationReport> {
-        env.storage()
-            .persistent()
-            .get(&DataKey::ReconciliationReport(token))
+        let key = DataKey::ReconciliationReport(token);
+        let report = env.storage().persistent().get(&key);
+        if report.is_some() {
+            Self::extend_persistent_read(&env, &key);
+        }
+        report
     }
 
     /// Pure read-only query to compute a reconciliation report on demand.
@@ -14225,6 +14243,7 @@ impl CraftNexusContract {
 
         let admin = Self::get_admin(&env).unwrap_or_else(|e| env.panic_with_error(e));
         admin.require_auth();
+        Self::check_not_paused(&env);
         let report: ReconciliationReport = env
             .storage()
             .persistent()
@@ -14248,13 +14267,11 @@ impl CraftNexusContract {
             .balance
             .checked_sub(total_expected)
             .unwrap_or_else(|| env.panic_with_error(Error::EmergencyAccountingInvariant));
-
         let currently_allocated: i128 = env
             .storage()
             .persistent()
             .get(&DataKey::AllocatedResidualBalance(token.clone()))
             .unwrap_or(0);
-
         let new_allocated = currently_allocated
             .checked_add(allocated_amount)
             .unwrap_or_else(|| env.panic_with_error(Error::EmergencyAccountingInvariant));
@@ -14278,7 +14295,6 @@ impl CraftNexusContract {
             .persistent()
             .get(&DataKey::NextReconciliationRepairPlanId)
             .unwrap_or(1);
-
         let next_id = id
             .checked_add(1)
             .unwrap_or_else(|| env.panic_with_error(Error::CounterOverflow));
