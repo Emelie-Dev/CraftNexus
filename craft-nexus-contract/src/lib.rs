@@ -21,7 +21,7 @@ impl Error for NotInitialized {
         ERROR_NOT_INITIALIZED
     }
     fn message(&Self) -> String {
-        String::from_str(\"max dispute duration not initialized\")
+        String::from_str("max dispute duration not initialized")
     }
 }
 
@@ -32,7 +32,7 @@ impl Error for InvalidDuration {
         ERROR_INVALID_DURATION
     }
     fn message(&Self) -> String {
-        String::from_str(\"invalid max dispute duration\")
+        String::from_str("invalid max dispute duration")
     }
 }
 
@@ -15700,7 +15700,7 @@ impl CraftNexusContract {
     }
 
     pub fn unpause(env: Env) {
-        let admin: Address = env.storage().get(&DataKey::Admin)\.unwrap();
+        let admin: Address = env.storage().get(&DataKey::Admin).unwrap();
         admin.require_auth();
         env.storage().set(&DataKey::Paused, &false);
     }
@@ -16184,3 +16184,5 @@ mod tests {
             if i >= buyer_next_counts.len() {
                 break;Sorry, something went wrong. Please try your request again.
 
+
+}}}}}}}}
