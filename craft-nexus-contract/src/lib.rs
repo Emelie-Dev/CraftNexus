@@ -22,6 +22,9 @@ pub mod conversion;
 /// Storage lifecycle, compaction, and TTL-management framework (#920).
 pub mod storage_lifecycle;
 
+/// Centralised TTL thresholds and refresh helpers.
+pub mod ttl;
+
 #[cfg(test)]
 mod admin_idempotency_test;
 #[cfg(test)]
@@ -42,6 +45,10 @@ mod min_release_window_test;
 mod pagination_boundary_test;
 #[cfg(test)]
 mod diagnostic_scan_test;
+#[cfg(test)]
+mod emergency_ops_test;
+#[cfg(test)]
+mod issue_1347_test;
 #[cfg(all(test, feature = "wasm-differential-tests"))]
 mod differential_test;
 #[cfg(test)]
@@ -16787,7 +16794,6 @@ pub struct UpgradeApprovalState {
     pub approvals: Vec<Address>,
 }
 
->>>>>>> 867344c7525c03c89db6e2269239d86e67ad05f3
 #[contracttype]
 #[derive(Clone, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testutils"), derive(Debug))]
