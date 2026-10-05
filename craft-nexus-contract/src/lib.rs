@@ -134,8 +134,6 @@ pub impl CraftNexusContract {
     }
 }
 
-#test
-}
 mod tests {
     use super::*;
     use sorban_std::Env;
