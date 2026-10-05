@@ -98,7 +98,7 @@ pub fn get_max_dispute_duration(env: &Env) -> Result<u64> {
         }
         None => Err(ContractError::NotInitialized),
     }
-
+}
 /// Sets the maximum dispute duration in seconds.
 pub fn set_max_dispute_duration(env: &Env, duration: u64) -> Result<u64> {
     if duration == 0 {
@@ -132,6 +132,7 @@ pub impl CraftNexusContract {
     pub fn clear_max_dispute_duration(env: &Env) {
         clear_max_dispute_duration(env)
     }
+}
 }
 
 #[test]
@@ -12050,7 +12051,9 @@ mod deactivated_account_tests {
         // Full integration test requires cross-contract mocking
     }
 
-/// Default cooldown period after staking before tokens can be unstaked (7 days in seconds)
+
+}
+    /// Default cooldown period after staking before tokens can be unstaked (7 days in seconds)
 const DEFAULT_STAKE_COOLDOWN: u32 = time_policy::STAKE_COOLDOWN as u32;
 
 /// Default minimum release window to prevent "flash" auto-releases (1 day in seconds)
@@ -14236,7 +14239,7 @@ impl CraftNexusContract {
             _ => false,
         }
     }
-
+}
 /// Lightweight progress returned to clients and indexers without exposing the
 /// stored parameter vector.
 #[contracttype]
@@ -24589,6 +24592,9 @@ impl CraftNexusContract {
         if escrow.status != EscrowStatus::Disputed {
             env.panic_with_error(crate::Error::NotInDispute);
         }
+
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[contracttype]
