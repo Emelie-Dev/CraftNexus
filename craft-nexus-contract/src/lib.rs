@@ -134,6 +134,7 @@ pub impl CraftNexusContract {
     }
 }
 
+#[test]
 mod tests {
     use super::*;
     use sorban_std::Env;
@@ -157,7 +158,7 @@ mod tests {
         );
     }
 
-    #test]
+    #[test]
     fn set_max_dispute_duration_rejects_zero() {
         let env = Env::default();
         assert_eq!(
